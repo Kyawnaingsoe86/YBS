@@ -1,172 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_location_search/flutter_location_search.dart';
-import 'package:free_map/free_map.dart';
+import 'package:flutter_osm_plugin/flutter_osm_plugin.dart';
 import 'package:ybs/controllers/hex_color.dart';
 import 'package:ybs/controllers/search_route_controller.dart';
 import 'package:ybs/data/app_data.dart';
 import 'package:ybs/models/bus.dart';
 import 'package:ybs/models/bus_stop.dart';
 import 'package:ybs/models/route_data.dart';
-import 'package:ybs/views/route_page.dart';
+import 'package:latlong2/latlong.dart';
 
 class RouteFinder extends StatefulWidget {
-  final LatLng currentPosition;
-  const RouteFinder({super.key, required this.currentPosition});
+  final LatLng userPosition;
+  const RouteFinder({super.key, required this.userPosition});
 
   @override
   State<RouteFinder> createState() => _RouteFinderState();
 }
 
 class _RouteFinderState extends State<RouteFinder> {
-  MapController mapController = MapController();
-  List<Marker> markers = [];
+  late MapController controller = MapController(
+    initPosition: GeoPoint(
+      latitude: widget.userPosition.latitude,
+      longitude: widget.userPosition.longitude,
+    ),
+  );
+  OSMOption option = OSMOption(
+    zoomOption: ZoomOption(initZoom: 13),
+    showZoomController: true,
+  );
+  List<GeoPoint> markers = [];
+  LatLng? pointLocation;
   BusStop? selectedStartBusStop;
   BusStop? selectedEndBusStop;
+  List<LatLng> routePoints = [];
 
   String start = "";
   String end = "";
 
-  LatLng? pointLocation;
-
-  setBusStopMarker(BuildContext context) {
-    markers.clear();
-    for (var i in AppData.testStop) {
-      markers.add(
-        Marker(
-          point: LatLng(i.latitude, i.longitude),
-          child: GestureDetector(
-            onTap: () {
-              showModalBottomSheet(
-                constraints: BoxConstraints(maxHeight: 300),
-                context: context,
-                builder: (context) => Column(
-                  children: [
-                    SizedBox(height: 20),
-                    Container(
-                      width: double.infinity,
-                      margin: EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 10,
-                      ),
-
-                      child: Row(
-                        spacing: 10,
-                        children: [
-                          Image.asset(
-                            "assets/images/bus_stop_1.png",
-                            width: 24,
-                          ),
-                          Text(
-                            i.name,
-                            style: TextStyle(
-                              color: Colors.blue,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Text(
-                        "အနီးရှိ နေရာများ",
-                        style: TextStyle(
-                          color: Colors.grey,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        padding: EdgeInsets.all(10),
-                        child: Text(
-                          i.nearPlaces,
-                          style: TextStyle(fontSize: 12),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 20),
-                    Row(
-                      spacing: 5,
-                      children: [
-                        Expanded(
-                          child: GestureDetector(
-                            onTap: () {
-                              selectedStartBusStop = i;
-                              start = i.name;
-                              Navigator.pop(context);
-                            },
-                            child: Container(
-                              padding: EdgeInsets.all(10),
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 235, 235, 235),
-                                borderRadius: BorderRadius.horizontal(
-                                  left: Radius.circular(40),
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.location_on, color: Colors.red),
-                                  Text("စမှတ်တိုင်"),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          child: Container(
-                            padding: EdgeInsets.all(10),
-                            alignment: Alignment.center,
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 235, 235, 235),
-                              borderRadius: BorderRadius.horizontal(
-                                right: Radius.circular(40),
-                              ),
-                            ),
-                            child: GestureDetector(
-                              onTap: () {
-                                selectedEndBusStop = i;
-                                end = i.name;
-                                Navigator.pop(context);
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.location_on, color: Colors.blue),
-                                  Text("ဆုံးမှတ်တိုင်"),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: 10),
-                  ],
-                ),
-              ).then((value) {
-                setState(() {});
-              });
-            },
-            child: Image.asset("assets/images/bus_stop_1.png", width: 14),
-          ),
-        ),
-      );
-    }
-    setState(() {});
-  }
+  setBusStopMarker(BuildContext context) {}
 
   clearAllData() {
-    markers.clear();
     selectedStartBusStop = null;
     selectedEndBusStop = null;
     start = "";
     end = "";
-    pointLocation = null;
     setState(() {});
   }
 
@@ -178,7 +54,6 @@ class _RouteFinderState extends State<RouteFinder> {
 
   @override
   void dispose() {
-    mapController.dispose();
     super.dispose();
   }
 
@@ -188,17 +63,7 @@ class _RouteFinderState extends State<RouteFinder> {
       body: Stack(
         alignment: Alignment.bottomCenter,
         children: [
-          FmMap(
-            mapController: mapController,
-            mapOptions: MapOptions(
-              initialCenter: widget.currentPosition,
-              minZoom: 3,
-              maxZoom: 16,
-              initialZoom: 13,
-              keepAlive: true,
-            ),
-            markers: markers,
-          ),
+          OSMFlutter(controller: controller, osmOption: option),
           Positioned(
             top: 40,
             left: 5,
@@ -302,6 +167,49 @@ class _RouteFinderState extends State<RouteFinder> {
                       selectedStartBusStop: selectedStartBusStop,
                       selectedEndBusStop: selectedEndBusStop,
                       routeList: routeDataList,
+                      onSelectRoute: (selectedRoute) async {
+                        Navigator.pop(context);
+
+                        // ------------------------------------------------------------
+                        // ---- Here is the code for adding markers and route. --------
+                        // ------------------------------------------------------------
+
+                        await controller.removeMarkers(markers);
+                        await controller.clearAllRoads();
+                        markers.clear();
+                        for (var i in selectedRoute) {
+                          markers.add(
+                            GeoPoint(
+                              latitude: i.busStop.latitude,
+                              longitude: i.busStop.longitude,
+                            ),
+                          );
+                        }
+                        for (var i in markers) {
+                          await controller.addMarker(i);
+                        }
+                        await controller.drawRoad(
+                          GeoPoint(
+                            latitude: selectedRoute.first.busStop.latitude,
+                            longitude: selectedRoute.first.busStop.longitude,
+                          ),
+                          GeoPoint(
+                            latitude: selectedRoute.last.busStop.latitude,
+                            longitude: selectedRoute.last.busStop.longitude,
+                          ),
+                          intersectPoint: [
+                            for (var i in selectedRoute)
+                              GeoPoint(
+                                latitude: i.busStop.latitude,
+                                longitude: i.busStop.longitude,
+                              ),
+                          ],
+                          roadOption: RoadOption(
+                            roadColor: Colors.red,
+                            roadWidth: 10,
+                          ),
+                        );
+                      },
                     ),
                   );
                 } else {
@@ -325,7 +233,6 @@ class _RouteFinderState extends State<RouteFinder> {
               ),
             ),
           ),
-
           Positioned(
             bottom: 10,
             right: 10,
@@ -336,38 +243,7 @@ class _RouteFinderState extends State<RouteFinder> {
                   style: ButtonStyle(
                     backgroundColor: WidgetStatePropertyAll(Colors.white),
                   ),
-                  onPressed: () async {
-                    LocationData? locationData = await LocationSearch.show(
-                      context: context,
-                      userAgent: UserAgent(
-                        appName: 'Location Search Example',
-                        email: 'support@myapp.com',
-                      ),
-                      mode: Mode.fullscreen,
-                    );
-                    if (locationData != null) {
-                      pointLocation = LatLng(
-                        locationData.latitude,
-                        locationData.longitude,
-                      );
-                      mapController.move(pointLocation!, 13);
-                    }
-                  },
-                  icon: Icon(Icons.pin_drop_rounded, color: Colors.red),
-                ),
-                IconButton.filled(
-                  style: ButtonStyle(
-                    backgroundColor: WidgetStatePropertyAll(Colors.white),
-                  ),
-                  onPressed: () {
-                    mapController.move(
-                      LatLng(
-                        widget.currentPosition.latitude,
-                        widget.currentPosition.longitude,
-                      ),
-                      13,
-                    );
-                  },
+                  onPressed: () {},
                   icon: Icon(Icons.gps_fixed, color: Colors.blue),
                 ),
               ],
@@ -553,12 +429,14 @@ class AvaliableRouteWidget extends StatelessWidget {
   final BusStop? selectedStartBusStop;
   final BusStop? selectedEndBusStop;
   final List<List<RouteData>> routeList;
+  final Function(List<RouteData>) onSelectRoute;
 
   const AvaliableRouteWidget({
     super.key,
     required this.selectedStartBusStop,
     required this.selectedEndBusStop,
     required this.routeList,
+    required this.onSelectRoute,
   });
 
   @override
@@ -622,7 +500,9 @@ class AvaliableRouteWidget extends StatelessWidget {
             child: ListView.builder(
               itemCount: routeList.length,
               itemBuilder: (context, index) =>
-                  routeButton(context, routeList[index], buses[index]),
+                  routeButton(context, routeList[index], buses[index], () {
+                    onSelectRoute.call(routeList[index]);
+                  }),
             ),
           ),
         ],
@@ -634,14 +514,16 @@ class AvaliableRouteWidget extends StatelessWidget {
     BuildContext context,
     List<RouteData> routeList,
     Set<Bus> buses,
+    Function() onTap,
   ) {
     return GestureDetector(
       onTap: () {
-        Navigator.pop(context);
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => RoutePage(route: routeList)),
-        );
+        onTap();
+        // Navigator.pop(context);
+        // Navigator.push(
+        //   context,
+        //   MaterialPageRoute(builder: (context) => RoutePage(route: routeList)),
+        // );
       },
       child: Container(
         margin: EdgeInsets.only(bottom: 3),

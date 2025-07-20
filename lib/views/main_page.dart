@@ -3,8 +3,8 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:free_map/free_map.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:ybs/data/app_data.dart';
 import 'package:ybs/models/bus_stop.dart';
 import 'package:ybs/views/bus_list_page.dart';
@@ -88,10 +88,7 @@ class _MainPageState extends State<MainPage> {
       userPosition = await getPosition();
       pages = [
         RouteFinder(
-          currentPosition: LatLng(
-            userPosition!.latitude,
-            userPosition!.longitude,
-          ),
+          userPosition: LatLng(userPosition!.latitude, userPosition!.longitude),
         ),
         BusListPage(),
         NotificationPage(),
