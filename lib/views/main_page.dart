@@ -21,10 +21,11 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   bool isLoading = false;
 
-  bool positionStreamStarted = false;
   Position? userPosition;
-  String currentLocation = "Unknow";
   int selectedIndex = 0;
+  late Widget homeTab;
+  late Widget busesTab;
+  late Widget notiTab;
   List<Widget> pages = [];
 
   Future<void> loadBusStops() async {
@@ -86,13 +87,15 @@ class _MainPageState extends State<MainPage> {
     await loadBusStops();
     try {
       userPosition = await getPosition();
-      pages = [
-        RouteFinder(
+      if (userPosition != null) {
+        homeTab = RouteFinder(
           userPosition: LatLng(userPosition!.latitude, userPosition!.longitude),
-        ),
-        BusListPage(),
-        NotificationPage(),
-      ];
+        );
+      } else {
+        homeTab = Center(child: Text("Notification not allowed."));
+      }
+      busesTab = BusListPage();
+      notiTab = NotificationPage();
       if (context.mounted) {
         setState(() {
           isLoading = false;
@@ -105,6 +108,7 @@ class _MainPageState extends State<MainPage> {
         });
       }
     }
+    pages = [homeTab, busesTab, notiTab];
   }
 
   @override
@@ -131,20 +135,21 @@ class _MainPageState extends State<MainPage> {
           )
         : Scaffold(
             body: pages[selectedIndex],
-            bottomNavigationBar: BottomNavigationBar(
-              currentIndex: selectedIndex,
-              items: [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: "Home"),
-                BottomNavigationBarItem(
+            bottomNavigationBar: NavigationBar(
+              animationDuration: Duration(milliseconds: 200),
+              selectedIndex: selectedIndex,
+              destinations: [
+                NavigationDestination(icon: Icon(Icons.home), label: "Home"),
+                NavigationDestination(
                   icon: Icon(Icons.directions_bus),
                   label: "Buses",
                 ),
-                BottomNavigationBarItem(
+                NavigationDestination(
                   icon: Icon(Icons.notifications),
                   label: "Notification",
                 ),
               ],
-              onTap: (value) {
+              onDestinationSelected: (value) {
                 setState(() {
                   selectedIndex = value;
                 });

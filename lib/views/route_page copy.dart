@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:blinking_text/blinking_text.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
@@ -302,12 +301,7 @@ class _RoutePageState extends State<RoutePage> {
                   SizedBox(
                     width: 320,
                     height: 60,
-                    child: Center(
-                      child: BlinkText(
-                        currentLocation,
-                        duration: Duration(seconds: 1),
-                      ),
-                    ),
+                    child: Center(child: Text(currentLocation)),
                   ),
                 ],
               ),
